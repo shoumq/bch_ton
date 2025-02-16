@@ -1,14 +1,17 @@
+import telebot
+import os
 from pybit.unified_trading import HTTP
 import pandas as pd
 import time
 from datetime import datetime
-import config
+from dotenv import load_dotenv
+
+load_dotenv()
 
 session = HTTP(
-    api_key=config.API_KEY,
-    api_secret=config.API_SECRET
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET")
 )
-
 
 def get_historical_data(symbol, interval, limit=200):
     """Получение исторических данных"""

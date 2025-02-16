@@ -1,10 +1,13 @@
 import telebot
-import config
+import os
+from dotenv import load_dotenv
 from trading_bot import get_historical_data, calculate_signals, place_order, get_wallet_balance
-from datetime import datetime
 import time
 
-bot = telebot.TeleBot(config.TELEGRAM_TOKEN)
+# Загрузка переменных окружения из .env файла
+load_dotenv()
+
+bot = telebot.TeleBot(os.getenv("TELEGRAM_TOKEN"))
 
 trading_state = {
     'last_action': None,
@@ -83,15 +86,15 @@ def trading_process(message, symbol="SUIUSDT", interval="15", qty=0.1):
             )
 
             if should_buy:
-                bot.send_message(message.chat.id, "🟢 Сигнал на покупку!")
                 if place_order(symbol, "Buy", qty):
                     trading_state['last_action'] = "Buy"
                     trading_state['consecutive_trades'] += 1
+                    bot.send_message(message.chat.id, "🟢 Сигнал на покупку!")
             elif should_sell:
-                bot.send_message(message.chat.id, "🔴 Сигнал на продажу!")
                 if place_order(symbol, "Sell", qty):
                     trading_state['last_action'] = "Sell"
                     trading_state['consecutive_trades'] += 1
+                    bot.send_message(message.chat.id, "🔴 Сигнал на продажу!")
             else:
                 trading_state['consecutive_trades'] = 0
 
