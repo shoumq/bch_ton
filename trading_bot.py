@@ -31,17 +31,18 @@ def get_historical_data(symbol, interval, limit=200):
 
 def calculate_signals(df):
     """Расчет торговых сигналов на основе SMA и дополнительных индикаторов"""
-
-    df['SMA20'] = df['close'].rolling(window=20).mean()
-    df['SMA50'] = df['close'].rolling(window=50).mean()
+    
+    # Уменьшение окон для SMA и RSI
+    df['SMA5'] = df['close'].rolling(window=5).mean()  # 5-минутная SMA
+    df['SMA10'] = df['close'].rolling(window=10).mean()  # 10-минутная SMA
 
     delta = df['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    gain = (delta.where(delta > 0, 0)).rolling(window=5).mean()  # 5-минутный RSI
+    loss = (-delta.where(delta < 0, 0)).rolling(window=5).mean()  # 5-минутный RSI
     rs = gain / loss
     df['RSI'] = 100 - (100 / (1 + rs))
 
-    df['volatility'] = df['close'].rolling(window=20).std()
+    df['volatility'] = df['close'].rolling(window=5).std()  # Волатильность за 5 минут
     return df
 
 
@@ -115,8 +116,8 @@ def trading_bot(symbol="SUIUSDT", interval="15", qty=3):
             df = calculate_signals(df)
 
             current_price = float(df['close'].iloc[0])
-            last_sma20 = df['SMA20'].iloc[-1]
-            last_sma50 = df['SMA50'].iloc[-1]
+            last_sma5 = df['SMA5'].iloc[-1]
+            last_sma10 = df['SMA10'].iloc[-1]
             current_rsi = df['RSI'].iloc[-1]
             volatility = df['volatility'].iloc[-1]
 
@@ -128,16 +129,17 @@ def trading_bot(symbol="SUIUSDT", interval="15", qty=3):
             print(f"RSI: {current_rsi:.2f}")
             print(f"Волатильность: {volatility:.2f}")
 
+            # Обновленные условия для покупки и продажи
             should_buy = (
-                    last_sma20 > last_sma50 and
-                    current_rsi < 70 and
+                    last_sma5 > last_sma10 and
+                    current_rsi < 60 and  # Более чувствительный уровень RSI
                     consecutive_trades < 3 and
                     last_action != "Buy"
             )
 
             should_sell = (
-                    last_sma20 < last_sma50 and
-                    current_rsi > 30 and
+                    last_sma5 < last_sma10 and
+                    current_rsi > 40 and  # Более чувствительный уровень RSI
                     consecutive_trades < 3 and
                     last_action != "Sell"
             )
@@ -156,11 +158,11 @@ def trading_bot(symbol="SUIUSDT", interval="15", qty=3):
                 consecutive_trades = 0
 
             print(f"Проверка сигналов завершена: {datetime.now()}")
-            time.sleep(60)
+            time.sleep(60)  # Интервал торговли 30 минут
 
         except Exception as e:
             print(f"Ошибка: {e}")
-            time.sleep(60)
+            time.sleep(60)  # Интервал торговли 30 минут
 
 
 def get_wallet_balance():

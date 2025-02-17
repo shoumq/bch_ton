@@ -54,8 +54,8 @@ def trading_process(message, symbol="SUIUSDT", interval="15", qty=20):
             df = calculate_signals(df)
 
             current_price = float(df['close'].iloc[0])
-            last_sma20 = df['SMA20'].iloc[-1]
-            last_sma50 = df['SMA50'].iloc[-1]
+            last_sma5 = df['SMA5'].iloc[-1]
+            last_sma10 = df['SMA10'].iloc[-1]
             current_rsi = df['RSI'].iloc[-1]
             volatility = df['volatility'].iloc[-1]
 
@@ -72,15 +72,15 @@ def trading_process(message, symbol="SUIUSDT", interval="15", qty=20):
             bot.send_message(message.chat.id, status_message)
 
             should_buy = (
-                    last_sma20 > last_sma50 and
-                    current_rsi < 70 and
+                    last_sma5 > last_sma10 and
+                    current_rsi < 60 and
                     trading_state['consecutive_trades'] < 3 and
                     trading_state['last_action'] != "Buy"
             )
 
             should_sell = (
-                    last_sma20 < last_sma50 and
-                    current_rsi > 30 and
+                    last_sma5 < last_sma10 and
+                    current_rsi > 40 and
                     trading_state['consecutive_trades'] < 3 and
                     trading_state['last_action'] != "Sell"
             )
