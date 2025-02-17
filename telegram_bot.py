@@ -47,7 +47,7 @@ def price_command(message):
         bot.reply_to(message, f"❌ Ошибка при получении цены: {e}")
 
 
-def trading_process(message, symbol="SUIUSDT", interval="15", qty=0.1):
+def trading_process(message, symbol="SUIUSDT", interval="15", qty=20):
     while True:
         try:
             df = get_historical_data(symbol, interval)

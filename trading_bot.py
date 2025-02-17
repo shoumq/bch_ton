@@ -104,7 +104,7 @@ def place_order_for_usdt(symbol, side, usdt_amount):
         return None
 
 
-def trading_bot(symbol="SUIUSDT", interval="15", qty=0.1):
+def trading_bot(symbol="SUIUSDT", interval="15", qty=3):
     """Основная логика торгового бота"""
     last_action = None
     consecutive_trades = 0
