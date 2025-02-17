@@ -86,15 +86,17 @@ def trading_process(message, symbol="SUIUSDT", interval="15", qty=0.1):
             )
 
             if should_buy:
+                bot.send_message(message.chat.id, "🟢 Сигнал на покупку!")
                 if place_order(symbol, "Buy", qty):
                     trading_state['last_action'] = "Buy"
                     trading_state['consecutive_trades'] += 1
-                    bot.send_message(message.chat.id, "🟢 Сигнал на покупку!")
+                    bot.send_message(message.chat.id, "✅ Покупка выполнена!")
             elif should_sell:
                 if place_order(symbol, "Sell", qty):
+                    bot.send_message(message.chat.id, "🔴 Сигнал на продажу!")
                     trading_state['last_action'] = "Sell"
                     trading_state['consecutive_trades'] += 1
-                    bot.send_message(message.chat.id, "🔴 Сигнал на продажу!")
+                    bot.send_message(message.chat.id, "🔻 Продажа выполнена!")
             else:
                 trading_state['consecutive_trades'] = 0
 
