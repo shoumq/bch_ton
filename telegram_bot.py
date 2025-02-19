@@ -46,6 +46,22 @@ def price_command(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Ошибка при получении цены: {e}")
 
+@bot.message_handler(commands=['status'])
+def status_command(message, symbol="SUIUSDT", interval="15"):
+    df = get_historical_data(symbol, interval)
+    df = calculate_signals(df)
+            
+    current_price = float(df['close'].iloc[0])
+    current_rsi = df['RSI'].iloc[-1]
+    volatility = df['volatility'].iloc[-1]
+            
+    status_message = (
+        f"📊 Статус торговли:\n"
+        f"Цена: {current_price} USDT\n"
+        f"RSI: {current_rsi:.2f}\n"
+        f"Волатильность: {volatility:.2f}"
+    )
+    bot.send_message(message.chat.id, status_message)
 
 def trading_process(message, symbol="SUIUSDT", interval="15", qty=20):
     while True:
@@ -62,14 +78,6 @@ def trading_process(message, symbol="SUIUSDT", interval="15", qty=20):
             min_qty = 0.1
             if qty < min_qty:
                 qty = min_qty
-
-            status_message = (
-                f"📊 Статус торговли:\n"
-                f"Цена: {current_price} USDT\n"
-                f"RSI: {current_rsi:.2f}\n"
-                f"Волатильность: {volatility:.2f}"
-            )
-            bot.send_message(message.chat.id, status_message)
 
             should_buy = (
                     last_sma20 > last_sma50 and
