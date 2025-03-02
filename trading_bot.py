@@ -1,12 +1,50 @@
-import telebot
 import os
 from pybit.unified_trading import HTTP
 import pandas as pd
 import time
 from datetime import datetime
 from dotenv import load_dotenv
+from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+import threading
+import uvicorn
+import json
 
 load_dotenv()
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except:
+        manager.active_connections.remove(websocket)
+        
 
 session = HTTP(
     api_key=os.getenv("API_KEY"),
@@ -133,20 +171,36 @@ def place_order(symbol, side, qty):
 
         order = session.place_order(**order_params)
         
-        f = open('log.txt','r+')
-        f.write(f"{datetime.now()}: {order}\n")
-        f.close()
+        order_data = {
+            "type": "order",
+            "timestamp": datetime.now().isoformat(),
+            "symbol": symbol,
+            "side": side,
+            "qty": qty,
+            "price": price,
+            "sl_price": sl_price,
+            "tp_price": tp_price,
+            "status": "executed" if order else "failed"
+        }
         
-        print(f"Ордер размещен: {order}")
-        print(f"Стоп-лосс: {sl_price}, Тейк-профит: {tp_price}")
+        def send_notification():
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(manager.broadcast(json.dumps(order_data)))
+            loop.close()
+
+        threading.Thread(target=send_notification).start()
+        
         return order
+        
     except Exception as e:
         print(f"Ошибка при размещении ордера: {e}")
         return None
 
 def trading_bot(symbol="SUIUSDT", interval="15", base_qty=3):
     """Обновленная основная логика с дополнительными проверками"""
-    last_action = None
+    last_action = "Sell"
     consecutive_trades = 0
 
     while True:
@@ -209,8 +263,21 @@ def trading_bot(symbol="SUIUSDT", interval="15", base_qty=3):
                     consecutive_trades += 1
             else:
                 consecutive_trades = 0
+                
+            data = {
+                "type": "check",
+                "message": f"Проверка завершена: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
 
-            print(f"Проверка завершена: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            def send_notification():
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(manager.broadcast(json.dumps(data)))
+                loop.close()
+
+            threading.Thread(target=send_notification).start()
+            
             time.sleep(60)
 
         except Exception as e:
@@ -228,8 +295,14 @@ def get_wallet_balance():
     except Exception as e:
         print(f"Ошибка получения баланса: {e}")
         return None, None
+    
+def run_fastapi():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
-    print("Запуск улучшенного торгового бота...")
+    api_thread = threading.Thread(target=run_fastapi, daemon=True)
+    api_thread.start()
+    
+    print("Запуск торгового бота...")
     print(f"Настройки риска: SL {STOP_LOSS_PERCENT*100}%, TP {TAKE_PROFIT_PERCENT*100}%")
     trading_bot()
